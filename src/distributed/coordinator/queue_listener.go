@@ -16,11 +16,13 @@ type QueueListener struct {
     conn    *amqp.Connection
     ch      *amqp.Channel
     sources map[string]<-chan amqp.Delivery
+    ea      *EventAggregator
 }
 
 func NewQueueListener() *QueueListener {
     ql := QueueListener{
         sources: make(map[string]<-chan amqp.Delivery),
+        ea:      NewEventAggregator(),
     }
     ql.conn, ql.ch = qutils.GetChannel(url)
     return &ql
@@ -67,5 +69,11 @@ func (ql *QueueListener) AddListener(msgs <-chan amqp.Delivery) {
         sd := new(dto.SensorMessage)
         d.Decode(sd)
         fmt.Printf("Received Message: %v\n", sd)
+        ed := EventData{
+            Name:      sd.Name,
+            Timestamp: sd.Timestamp,
+            Value:     sd.Value,
+        }
+        ql.ea.PublishEvent("MessageReceived_"+msg.RoutingKey, ed)
     }
 }
