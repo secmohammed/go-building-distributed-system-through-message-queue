@@ -8,7 +8,7 @@ import (
 )
 
 const SensorListQueue = "SensorList"
-
+const SensorDiscoveryExchange = "SensorDiscover"
 //GetChannel is used to fetch the channel and connection through dialing the rabbitmq server and check on connectivity then return them.
 func GetChannel(url string) (*amqp.Connection, *amqp.Channel) {
     conn, err := amqp.Dial(url)

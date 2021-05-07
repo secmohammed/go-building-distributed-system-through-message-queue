@@ -24,13 +24,7 @@ var value = r.Float64()*(*max-*min) + *min
 var nom = (*max-*min)/2 + *min
 var url = "amqp://guest:guest@localhost:5672"
 
-func main() {
-    flag.Parse()
-    conn, ch := qutils.GetChannel(url)
-    defer conn.Close()
-    defer ch.Close()
-    dataQueue := qutils.GetQueue(*name, ch)
-
+func publishQueueName(ch *amqp.Channel) {
     msg := amqp.Publishing{
         Body: []byte(*name),
     }
@@ -42,6 +36,24 @@ func main() {
         false,
         msg,
     )
+
+}
+func main() {
+    flag.Parse()
+    conn, ch := qutils.GetChannel(url)
+    defer conn.Close()
+    defer ch.Close()
+    dataQueue := qutils.GetQueue(*name, ch)
+    publishQueueName(ch)
+    discoveryQueue := qutils.GetQueue("", ch)
+    ch.QueueBind(
+        discoveryQueue.Name,
+        "",
+        qutils.SensorDiscoveryExchange,
+        false,
+        nil,
+    )
+    go listenForDiscoverRequests(discoveryQueue.Name, ch)
     dur, _ := time.ParseDuration(strconv.Itoa(1000/int(*freq)) + "ms")
     signal := time.Tick(dur)
     // no need to register the buffer for each loop, but don't forget to reset at each loop.
@@ -67,6 +79,20 @@ func main() {
             msg,
         )
         log.Printf("reading message. value: %v\n", value)
+    }
+}
+func listenForDiscoverRequests(name string, ch *amqp.Channel) {
+    msgs, _ := ch.Consume(
+        name,
+        "",
+        true,
+        false,
+        false,
+        false,
+        nil,
+    )
+    for range msgs {
+        publishQueueName(ch)
     }
 }
 func calcValue() {
