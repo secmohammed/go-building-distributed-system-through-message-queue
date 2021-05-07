@@ -30,14 +30,14 @@ func main() {
     defer conn.Close()
     defer ch.Close()
     dataQueue := qutils.GetQueue(*name, ch)
-    sensorQueue := qutils.GetQueue(qutils.SensorListQueue, ch)
+
     msg := amqp.Publishing{
         Body: []byte(*name),
     }
     // Publish the sensor queue name, to identify which queue we are currently at.
     ch.Publish(
-        "", // direct methodolgy
-        sensorQueue.Name,
+        "amq.fanout", // fanout methodolgy
+        "",           // if changed to fanout, we don't need a queue name
         false,
         false,
         msg,
